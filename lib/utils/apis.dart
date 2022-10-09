@@ -1,11 +1,6 @@
-import 'dart:convert';
-
-import 'package:flutter_event_calendar/utils/get_full_name.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:syncfusion_flutter_calendar/calendar.dart';
-
-import '../models/queue_reservation.dart';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'is_string_invalid.dart';
 
@@ -44,10 +39,44 @@ Future<http.Response> getAllReservationApi({
 
     response = await http.get(uri, headers: headers);
     print(response.statusCode);
-    print(response.body);
+    // print(response.body);
   } catch (e) {
     print('getAllReservationApi error = $e');
     return null;
+  }
+  return response;
+}
+
+Future<http.Response> getReservationById({
+  @required String reservationId,
+}) async {
+  print("GetReservationById api called");
+  http.Response response;
+  if (isStringInvalid(reservationId)) {
+    return null;
+  }
+  String url = '$baseUrl/user/reservation?reservationId=$reservationId';
+  print('Get reservation by id: $url');
+  response = await http.get(Uri.parse(url), headers: {
+    'Authorization':
+        'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2MjE5MjMxOTZkYzg1MGMyOWZhN2MyZTYiLCJwaG9uZU5vIjoiKzkxNzMxOTQzOTcyNSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTY1NzYyMjE5NCwiZXhwIjoxNjgzNTQyMTk0fQ.GGzEnN9CiPs_8-jwueEzpctM6YdM-ZrvXH6CI36fGfk',
+  });
+  print(response.statusCode);
+  // print(response.body);
+  if (response.statusCode == 200 || response.statusCode == 201) {
+    print('GetReservationById : Success');
+    // return true;
+  } else if (response.statusCode == 400) {
+    print('GetReservationById  : res id missing');
+  } else if (response.statusCode == 401) {
+    print('GetReservationById  : unauthorized');
+  } else if (response.statusCode == 500) {
+    print('100: ${response.body}');
+    print('GetReservationById  : server error');
+  } else if (response.statusCode == 402) {
+    print('GetReservationById  : invalid reservation id');
+  } else {
+    print('GetReservationById error : ${response.statusCode}');
   }
   return response;
 }
