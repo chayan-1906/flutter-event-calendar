@@ -58,6 +58,7 @@ class _HomePageState extends State<HomePage> {
         for (var appointmentInJson in listFromResponse) {
           var appointmentFromJson = Appointment(
             id: appointmentInJson['ReservationID'],
+            color: Colors.deepPurpleAccent,
             subject: getFullName(
               firstName: appointmentInJson['firstName'],
               middleName: appointmentInJson['middleName'],
@@ -72,10 +73,13 @@ class _HomePageState extends State<HomePage> {
                 ? DateTime.parse(appointmentInJson["ReservationEndTime"])
                     .toLocal()
                 : DateTime.now(),
+            notes:
+                'appointmentTypeId: ${appointmentInJson['appointmentTypeId']}, appointmentTypeName: ${appointmentInJson['appointmentTypeName']}, providerId: ${appointmentInJson['providerId']}, providerName: ${appointmentInJson['providerName']}',
           );
           setState(() {
             skywaAppointmentList.add(appointmentFromJson);
           });
+          print('appointmentFromJson: $appointmentFromJson');
         }
       } else {
         print(
