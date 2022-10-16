@@ -3,6 +3,12 @@ import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_event_calendar/appointment_details_screen.dart';
+import 'package:flutter_event_calendar/models/queue_reservation.dart';
+import 'package:flutter_event_calendar/skywa_choice_chip.dart';
+import 'package:skywa_framework_widgets/skywa_alert_dialog.dart';
+import 'package:skywa_framework_widgets/skywa_elevated_button.dart';
+import 'package:skywa_framework_widgets/skywa_radio_group.dart';
+import 'package:skywa_framework_widgets/skywa_text_button.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 
 import 'utils/apis.dart';
@@ -22,6 +28,20 @@ class _HomePageState extends State<HomePage> {
   final CalendarController _calendarController = CalendarController();
   // CalendarView calendarView = CalendarView.month;
   List<Appointment> skywaAppointmentList = [];
+  List<Appointment> filteredSkywaAppointmentList = [];
+  List<String> availableAppointmentTypes = [
+    'Show All',
+    'Doctor Monteray Has a long name',
+    'Dr Kerry',
+    'Sloop John B',
+    'New Service',
+    'apt 1',
+    'apt2',
+    'ap3',
+    'apt5',
+    'apt4',
+  ];
+  String selectedApptTypeName;
 
   List<Appointment> getMeetings() {
     List<Appointment> meetings = <Appointment>[];
@@ -42,49 +62,59 @@ class _HomePageState extends State<HomePage> {
   }
 
   List<Appointment> getAppointments() {
-    return skywaAppointmentList;
+    return filteredSkywaAppointmentList;
   }
 
-  Future<void> initAll() async {
+  Future<void> initAll({String selectedApptTypeName}) async {
+    print('initAll called with $selectedApptTypeName');
     setState(() {
       isLoading = true;
     });
+    skywaAppointmentList.clear();
+    filteredSkywaAppointmentList.clear();
     getAllReservationApi().then((response) {
       setState(() {
         isLoading = false;
       });
       if (response.statusCode == 200) {
         final listFromResponse = jsonDecode(response.body);
-        for (var appointmentInJson in listFromResponse) {
+        List<QueueReservation> pastAppointments = [];
+        for (var queueInJson in listFromResponse) {
+          var queueFromJson = QueueReservation.fromJson(queueInJson);
+          pastAppointments.add(queueFromJson);
+        }
+        for (var pastAppointment in pastAppointments) {
           var appointmentFromJson = Appointment(
-            id: appointmentInJson['ReservationID'],
+            id: pastAppointment.reservationID,
             color: Colors.deepPurpleAccent,
-            subject: getFullName(
-              firstName: appointmentInJson['firstName'],
-              middleName: appointmentInJson['middleName'],
-              lastName: appointmentInJson['lastName'],
-            ),
-            startTime:
-                !isStringInvalid(appointmentInJson["ReservationStartTime"])
-                    ? DateTime.parse(appointmentInJson["ReservationStartTime"])
-                        .toLocal()
-                    : DateTime.now(),
-            endTime: !isStringInvalid(appointmentInJson["ReservationEndTime"])
-                ? DateTime.parse(appointmentInJson["ReservationEndTime"])
-                    .toLocal()
+            subject: pastAppointment.fullName,
+            startTime: !isStringInvalid(
+                    pastAppointment.reservationStartTime.toString())
+                ? pastAppointment.reservationStartTime.toLocal()
                 : DateTime.now(),
+            endTime:
+                !isStringInvalid(pastAppointment.reservationEndTime.toString())
+                    ? pastAppointment.reservationEndTime.toLocal()
+                    : DateTime.now(),
             notes:
-                'appointmentTypeId: ${appointmentInJson['appointmentTypeId']}, appointmentTypeName: ${appointmentInJson['appointmentTypeName']}, providerId: ${appointmentInJson['providerId']}, providerName: ${appointmentInJson['providerName']}',
+                'appointmentTypeId: ${pastAppointment.appointmentTypeId}, appointmentTypeName: ${pastAppointment.appointmentTypeName}, providerId: ${pastAppointment.slotBookingDetails.providerId}, providerName: ${pastAppointment.slotBookingDetails.providerName}',
           );
           setState(() {
             skywaAppointmentList.add(appointmentFromJson);
+            filteredSkywaAppointmentList.add(appointmentFromJson);
           });
-          print('appointmentFromJson: $appointmentFromJson');
         }
       } else {
         print(
             'getAllReservationApi error: ${response.statusCode}- ${response.body}');
       }
+      if (selectedApptTypeName != 'Show All') {
+        filteredSkywaAppointmentList = skywaAppointmentList.where((element) {
+          // print(element.notes);
+          return element.notes.contains(selectedApptTypeName.toString());
+        }).toList();
+      }
+      print(filteredSkywaAppointmentList.length);
     });
   }
 
@@ -93,7 +123,7 @@ class _HomePageState extends State<HomePage> {
     // TODO: implement initState
     super.initState();
     _calendarController.view = CalendarView.month;
-    initAll();
+    initAll(selectedApptTypeName: 'Show All');
   }
 
   @override
@@ -104,6 +134,64 @@ class _HomePageState extends State<HomePage> {
         title: const Text('Event Calendar'),
         elevation: 0.0,
         actions: [
+          IconButton(
+            onPressed: () {
+              SkywaAlertDialog.success(
+                context: context,
+                content: StatefulBuilder(
+                  builder: (context, builderSetState) {
+                    return Container(
+                      padding: const EdgeInsets.all(10.0),
+                      child: Stack(
+                        children: [
+                          SingleChildScrollView(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  height:
+                                      MediaQuery.of(context).size.height * 0.40,
+                                  child: SkywaRadioGroup(
+                                    // width: MediaQuery.of(context).size.width * 0.50,
+                                    texts: availableAppointmentTypes,
+                                    backgroundColor: Colors.transparent,
+                                    onChanged: (String selectedOption) {
+                                      builderSetState(() {
+                                        selectedApptTypeName = selectedOption;
+                                      });
+                                    },
+                                    selectedValue: selectedApptTypeName,
+                                  ),
+                                ),
+                                SkywaElevatedButton.save(
+                                  context: context,
+                                  text: 'Applyyyy',
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    initAll(
+                                      selectedApptTypeName:
+                                          selectedApptTypeName,
+                                    ).then((value) {
+                                      if (isLoading && mounted) {
+                                        setState(() {
+                                          isLoading = false;
+                                        });
+                                      }
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+            icon: const Icon(Icons.filter_alt_rounded),
+          ),
           PopupMenuButton(itemBuilder: (context) {
             return const [
               PopupMenuItem<int>(
@@ -189,7 +277,7 @@ class _HomePageState extends State<HomePage> {
                     }),
                   );
                 } else if (calendarTapDetails.appointments.length >= 2) {
-                  print(calendarTapDetails.appointments);
+                  // print(calendarTapDetails.appointments);
                 }
               },
             ),

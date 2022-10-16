@@ -21,8 +21,9 @@ Future<http.Response> getAllReservationApi({
           DateTime(today.year, today.month, today.day, 0, 0, 0);
       DateTime todayEnd = todayBeginning.add(const Duration(days: 1));
       url = '$baseUrl/manager/getAllreservation?'
-          'businessId=62c41676b00b4a68943644fa&' // Chandrima's Business
-          '&startDate=2022-10-03&endDate=2022-10-07';
+          // 'businessId=62c41676b00b4a68943644fa&' // Chandrima's Business
+          'businessId=6139baec02aaa480b1814e31&' // Skywa HQ
+          '&startDate=2022-10-13&endDate=2022-10-20';
     } else {
       url = '$baseUrl/manager/getAllreservation?'
           'businessId=$businessId&'
@@ -55,7 +56,7 @@ Future<http.Response> getReservationById({
   if (isStringInvalid(reservationId)) {
     return null;
   }
-  String url = '$baseUrl/user/reservation?reservationId=$reservationId';
+  String url = '$baseUrl/manager/getReservationById?reservationId=$reservationId';
   print('Get reservation by id: $url');
   response = await http.get(Uri.parse(url), headers: {
     'Authorization':
